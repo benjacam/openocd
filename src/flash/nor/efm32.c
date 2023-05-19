@@ -241,6 +241,8 @@ static int efm32x_read_info(struct flash_bank *bank,
 		/* Cortex-M4 device (WONDER GECKO) */
 	} else if (((cpuid >> 4) & 0xfff) == 0xc60) {
 		/* Cortex-M0+ device */
+	} else if ((cpuid & ARM_CPUID_PARTNO_MASK) == CORTEX_M33_PARTNO) {
+		/* Cortex-M33 device */
 	} else {
 		printf("0x%x\n", cpuid);
 		LOG_ERROR("Target is not Cortex-Mx Device");
