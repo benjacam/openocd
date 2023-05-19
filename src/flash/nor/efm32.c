@@ -242,6 +242,7 @@ static int efm32x_read_info(struct flash_bank *bank,
 	} else if (((cpuid >> 4) & 0xfff) == 0xc60) {
 		/* Cortex-M0+ device */
 	} else {
+		printf("0x%x\n", cpuid);
 		LOG_ERROR("Target is not Cortex-Mx Device");
 		return ERROR_FAIL;
 	}
