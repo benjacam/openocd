@@ -74,7 +74,8 @@
 #define EFM32_MSC_DI_LEGACY_FAMILY      (EFM32_MSC_DEV_INFO+0x1fe)
 #define EFM32_MSC_DI_PROD_REV           (EFM32_MSC_DEV_INFO+0x002)
 
-#define EFM32_MSC_REGBASE               0x40030000
+// Important note - using non-secture (_NS) register base
+#define EFM32_MSC_REGBASE               0x50030000
 #define EFM32_MSC_REG_WRITECTRL         0x00c
 #define EFM32_MSC_WRITECTRL_WREN_MASK   0x1
 #define EFM32_MSC_REG_WRITECMD          0x010
@@ -93,7 +94,8 @@
 #define EFM32_MSC_REG_LOCK              0x03c
 #define EFM32_MSC_LOCK_LOCKKEY          0x1b71
 
-#define EFM32_CMU_REGBASE               0x40008000
+// Important note - using non-secture (_NS) register base
+#define EFM32_CMU_REGBASE               0x50008000
 #define EFM32_CMU_REG_CLKEN1_SET        0x1068
 
 #define EFM32_CMU_REG_CLKEN1_MSC_MSK_G22 (1 << 17)
