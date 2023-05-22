@@ -304,20 +304,26 @@ static int efm32x_write_reg_u32(struct flash_bank *bank, target_addr_t offset,
 static int efm32x_read_info(struct flash_bank *bank)
 {
 	int ret;
+	uint32_t cpuid = 0;
 	struct efm32x_flash_chip *efm32x_info = bank->driver_priv;
 	struct efm32_info *efm32_info = &(efm32x_info->info);
 
 	memset(efm32_info, 0, sizeof(struct efm32_info));
 
-	const struct cortex_m_common *cortex_m = target_to_cm(bank->target);
+	ret = target_read_u32(bank->target, CPUID, &cpuid);
+	if (ERROR_OK != ret)
+		return ret;
 
-	switch (cortex_m->core_info->partno) {
-	case CORTEX_M3_PARTNO:
-	case CORTEX_M4_PARTNO:
-	case CORTEX_M0P_PARTNO:
-	case CORTEX_M33_PARTNO:
-		break;
-	default:
+	if (((cpuid >> 4) & 0xfff) == 0xc23) {
+		/* Cortex-M3 device */
+	} else if (((cpuid >> 4) & 0xfff) == 0xc24) {
+		/* Cortex-M4 device (WONDER GECKO) */
+	} else if (((cpuid >> 4) & 0xfff) == 0xc60) {
+		/* Cortex-M0+ device */
+	} else if ((cpuid & ARM_CPUID_PARTNO_MASK) == CORTEX_M33_PARTNO) {
+		/* Cortex-M33 device */
+	} else {
+		printf("0x%x\n", cpuid);
 		LOG_ERROR("Target is not Cortex-Mx Device");
 		return ERROR_FAIL;
 	}
@@ -567,7 +573,11 @@ static int efm32x_erase(struct flash_bank *bank, unsigned int first,
 		return ERROR_TARGET_NOT_HALTED;
 	}
 
-	efm32x_msc_lock(bank, 0);
+	ret = efm32x_msc_lock(bank, 0);
+	if (ret != ERROR_OK) {
+		LOG_ERROR("Failed to unlock MSC");
+		return ret;
+	}
 	ret = efm32x_set_wren(bank, 1);
 	if (ret != ERROR_OK) {
 		LOG_ERROR("Failed to enable MSC write");
@@ -1152,6 +1162,13 @@ static int efm32x_probe(struct flash_bank *bank)
 		return ret;
 	}
 
+	uint32_t msc_clken_r;
+	ret = target_read_u32(bank->target, EFM32_CMU_REGBASE + EFM32_CMU_REG_CLKEN1_SET, &msc_clken_r);
+	if ((ret != ERROR_OK) || (msc_clken != msc_clken_r))
+	{
+		LOG_ERROR("Failed to verify enabled MSC clock %d 0x%x 0x%x", ret, msc_clken_r, msc_clken);
+	}
+
 	if (bank->base == base_address) {
 		bank->num_sectors = efm32_mcu_info->flash_sz_kib * 1024 /
 			efm32_mcu_info->page_size;
@@ -1215,7 +1232,22 @@ static int efm32x_protect_check(struct flash_bank *bank)
 	return ERROR_OK;
 }
 
-static int get_efm32x_info(struct flash_bank *bank, struct command_invocation *cmd)
+/*
+ * Helper to create a human friendly string describing a part
+ */
+static int efm32x_decode_info(struct efm32_info *info, char *buf, int buf_size)
+{
+	int printed = 0;
+	printed = snprintf(buf, buf_size, "%s Gecko, rev %d",
+			info->family_data->name, info->prod_rev);
+
+	if (printed >= buf_size)
+		return ERROR_BUF_TOO_SMALL;
+
+	return ERROR_OK;
+}
+
+static int get_efm32x_info(struct flash_bank *bank, char *buf, int buf_size)
 {
 	struct efm32x_flash_chip *efm32x_info = bank->driver_priv;
 	int ret;
@@ -1226,9 +1258,7 @@ static int get_efm32x_info(struct flash_bank *bank, struct command_invocation *c
 		return ret;
 	}
 
-	command_print_sameline(cmd, "%cG%d%c%03d, rev %d", efm32x_info->info.part_family, efm32x_info->info.part_family_num,
-		efm32x_info->info.dev_num_letter, efm32x_info->info.dev_num_digits, efm32x_info->info.prod_rev);
-	return ERROR_OK;
+	return efm32x_decode_info(&efm32x_info->info, buf, buf_size);
 }
 
 COMMAND_HANDLER(efm32x_handle_debuglock_command)
