@@ -97,6 +97,7 @@
 // Important note - using non-secture (_NS) register base
 #define EFM32_CMU_REGBASE               0x50008000
 #define EFM32_CMU_REG_CLKEN1_SET        0x1068
+#define EFM32_CMU_REG_CLKEN1            0x0068
 
 #define EFM32_CMU_REG_CLKEN1_MSC_MSK_G22 (1 << 17)
 #define EFM32_CMU_REG_CLKEN1_MSC_MSK_G23 (1 << 16)
@@ -1165,8 +1166,8 @@ static int efm32x_probe(struct flash_bank *bank)
 	}
 
 	uint32_t msc_clken_r;
-	ret = target_read_u32(bank->target, EFM32_CMU_REGBASE + EFM32_CMU_REG_CLKEN1_SET, &msc_clken_r);
-	if ((ret != ERROR_OK) || (msc_clken != msc_clken_r))
+	ret = target_read_u32(bank->target, EFM32_CMU_REGBASE + EFM32_CMU_REG_CLKEN1, &msc_clken_r);
+	if ((ret != ERROR_OK) || ((msc_clken_r & msc_clken) != msc_clken))
 	{
 		LOG_ERROR("Failed to verify enabled MSC clock %d 0x%x 0x%x", ret, msc_clken_r, msc_clken);
 	}
